@@ -1,0 +1,7 @@
+cope-tex/
+├── app.py
+├── requirements.txt
+├── templates/
+│   ├── login.html
+│   ├── index.html
+│   └── mobile.html

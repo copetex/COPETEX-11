@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COPE-TEX</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system,'Segoe UI',Arial,sans-serif; }
+  body { background:#f0f2f5; color:#2c3e50; padding-bottom:80px; }
+  header { background:#1e3a8a; color:white; padding:14px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+  header .bar { display:flex; justify-content:space-between; align-items:center; max-width:1000px; margin:0 auto; }
+  header h1 { font-size:17px; }
+  header .user { font-size:12px; opacity:0.9; }
+  header a { color:white; text-decoration:none; font-size:12px; background:rgba(255,255,255,0.2); padding:6px 12px; border-radius:6px; }
+  .container { padding:15px; max-width:1000px; margin:0 auto; }
+  .tabs { display:flex; gap:6px; overflow-x:auto; padding:10px; background:white; position:sticky; top:60px; z-index:99; }
+  .tab { padding:9px 14px; background:#f3f4f6; border:none; border-radius:8px; font-size:13px; font-weight:600; color:#4b5563; cursor:pointer; white-space:nowrap; }
+  .tab.active { background:#1e3a8a; color:white; }
+  .card { background:white; border-radius:12px; padding:18px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+  .card h2 { font-size:16px; color:#1e3a8a; margin-bottom:12px; border-bottom:2px solid #e5e7eb; padding-bottom:8px; }
+  label { display:block; font-size:13px; font-weight:600; color:#4b5563; margin-bottom:5px; margin-top:10px; }
+  input, select { width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:8px; font-size:15px; }
+  input:focus, select:focus { outline:none; border-color:#1e3a8a; }
+  button.btn { background:#1e3a8a; color:white; border:none; padding:12px 20px; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; width:100%; margin-top:12px; }
+  button.btn.success { background:#059669; }
+  button.btn.danger { background:#dc2626; padding:6px 12px; width:auto; font-size:12px; margin:0; }
+  button.small { padding:8px 14px; font-size:13px; width:auto; }
+  .gamme-item { display:flex; justify-content:space-between; align-items:center; padding:10px; background:#f9fafb; border-radius:8px; margin-bottom:6px; font-size:14px; }
+  .of-card { background:#f9fafb; border-left:4px solid #1e3a8a; padding:12px; border-radius:8px; margin-bottom:10px; }
+  .of-card h3 { font-size:15px; margin-bottom:5px; }
+  .of-card .info { font-size:12px; color:#6b7280; margin-bottom:8px; }
+  .progress-bar { background:#e5e7eb; height:8px; border-radius:4px; overflow:hidden; margin:6px 0; }
+  .progress-fill { background:linear-gradient(90deg,#1e3a8a,#3b82f6); height:100%; transition:width 0.4s; }
+  .progress-fill.done { background:#059669; }
+  .op-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f3f4f6; font-size:13px; }
+  .op-row:last-child { border:none; }
+  .badge { padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .badge.done { background:#d1fae5; color:#065f46; }
+  .badge.progress { background:#fef3c7; color:#92400e; }
+  .badge.wait { background:#e5e7eb; color:#6b7280; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px; }
+  .stat { background:#f9fafb; padding:14px; border-radius:8px; text-align:center; }
+  .stat .value { font-size:24px; font-weight:700; color:#1e3a8a; }
+  .stat .label { font-size:11px; color:#6b7280; margin-top:4px; }
+  .historique { background:#f9fafb; border-radius:8px; padding:10px; margin-top:10px; max-height:250px; overflow-y:auto; }
+  .hist-line { display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid #e5e7eb; }
+  .hidden { display:none !important; }
+  .empty { text-align:center; color:#9ca3af; font-size:14px; padding:20px; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#059669; color:white; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600; z-index:999; display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div>
+      <h1>👔 COPE-TEX</h1>
+      <div class="user">{{ user }} — {{ poste }}</div>
+    </div>
+    <a href="/logout">Déconnexion</a>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('dashboard', this)">📊 Dashboard</button>
+  <button class="tab" onclick="showTab('saisie', this)">⏱️ Saisie</button>
+  <button class="tab" onclick="showTab('articles', this)">📦 Articles</button>
+  <button class="tab" onclick="showTab('of', this)">📋 OF</button>
+  <button class="tab" onclick="showTab('operateurs', this)">👥 Opératrices</button>
+  <button class="tab" onclick="showTab('rapport', this)">📈 Rapport</button>
+</div>
+
+<div class="container">
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard">
+    <div class="card">
+      <h2>📊 Production du jour</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="value" id="statPieces">0</div><div class="label">Pièces produites</div></div>
+        <div class="stat"><div class="value" id="statRebut">0</div><div class="label">Rebuts</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📋 OF en cours</h2>
+      <div id="dashOF"></div>
+    </div>
+  </div>
+
+  <!-- SAISIE -->
+  <div id="tab-saisie" class="hidden">
+    <div class="card">
+      <h2>⏱️ Saisie de production</h2>
+      <label>Ordre de fabrication</label>
+      <select id="saisieOF" onchange="updateOpsSaisie()"></select>
+      <label>Opération</label>
+      <select id="saisieOp"></select>
+      <div class="grid2">
+        <div>
+          <label>Heure</label>
+          <select id="saisieHeure"></select>
+        </div>
+        <div>
+          <label>Quantité</label>
+          <input id="saisieQte" type="number" placeholder="Ex: 45">
+        </div>
+      </div>
+      <label>Rebuts</label>
+      <input id="saisieRebut" type="number" placeholder="0" value="0">
+      <button class="btn success" onclick="saveSaisie()">✅ Valider</button>
+    </div>
+    <div class="card">
+      <h2>📜 Historique du jour</h2>
+      <div id="saisieHistorique" class="historique"></div>
+    </div>
+  </div>
+
+  <!-- ARTICLES -->
+  <div id="tab-articles" class="hidden">
+    <div class="card">
+      <h2>➕ Créer un article + sa gamme</h2>
+      <label>Nom de l'article</label>
+      <input id="articleNom" placeholder="Ex: Chemise">
+      <label>Référence</label>
+      <input id="articleRef" placeholder="Ex: CH-001">
+      <label>Gamme de montage</label>
+      <div id="gammeList"></div>
+      <div class="grid2">
+        <input id="newOpName" placeholder="Opération (ex: Coupe)">
+        <input id="newOpTemps" type="number" placeholder="Temps (min)">
+      </div>
+      <button class="btn small" onclick="addOperation()" style="margin-top:8px;">+ Ajouter opération</button>
+      <button class="btn success" onclick="saveArticle()">💾 Enregistrer l'article</button>
+    </div>
+    <div class="card">
+      <h2>📦 Articles existants</h2>
+      <div id="articlesList"></div>
+    </div>
+  </div>
+
+  <!-- OF -->
+  <div id="tab-of" class="hidden">
+    <div class="card">
+      <h2>➕ Lancer un OF</h2>
+      <label>Article</label>
+      <select id="ofArticle"></select>
+      <label>Quantité</label>
+      <input id="ofQte" type="number" placeholder="Ex: 200">
+      <label>Date de livraison</label>
+      <input id="ofDate" type="date">
+      <button class="btn success" onclick="saveOF()">🚀 Lancer l'OF</button>
+    </div>
+    <div class="card">
+      <h2>📋 OF existants</h2>
+      <div id="ofList"></div>
+    </div>
+  </div>
+
+  <!-- OPÉRATEURS -->
+  <div id="tab-operateurs" class="hidden">
+    <div class="card">
+      <h2>➕ Ajouter une opératrice</h2>
+      <label>Nom</label>
+      <input id="opNom" placeholder="Ex: Fatima">
+      <label>Poste</label>
+      <input id="opPoste" placeholder="Ex: Piquage">
+      <label>Code d'accès (unique)</label>
+      <input id="opCode" placeholder="Ex: FAT" maxlength="10" style="text-transform:uppercase;">
+      <button class="btn success" onclick="saveOperateur()">💾 Enregistrer</button>
+    </div>
+    <div class="card">
+      <h2>👥 Opératrices</h2>
+      <div id="operateursList"></div>
+    </div>
+  </div>
+
+  <!-- RAPPORT -->
+  <div id="tab-rapport" class="hidden">
+    <div class="card">
+      <h2>📈 Rapport fin de journée</h2>
+      <label>Date</label>
+      <input type="date" id="rapportDate" onchange="loadRapport()">
+      <div id="rapportContent" style="margin-top:15px;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let articles = [], ofs = [], operateurs = [], gammeTemp = [];
+const HEURES = [8,9,10,11,13,14,15,16,17];
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+function showTab(name, el) {
+  ['dashboard','saisie','articles','of','operateurs','rapport'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== name);
+  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'saisie') loadSaisie();
+  if (name === 'rapport') loadRapport();
+}
+
+// ---------- ARTICLES ----------
+function addOperation() {
+  const nom = document.getElementById('newOpName').value.trim();
+  const temps = parseFloat(document.getElementById('newOpTemps').value) || 0;
+  if (!nom) return toast('Entrez le nom');
+  gammeTemp.push({ nom, temps });
+  document.getElementById('newOpName').value = '';
+  document.getElementById('newOpTemps').value = '';
+  renderGammeTemp();
+}
+function removeOp(i) { gammeTemp.splice(i,1); renderGammeTemp(); }
+function renderGammeTemp() {
+  const el = document.getElementById('gammeList');
+  if (!gammeTemp.length) { el.innerHTML = '<div class="empty">Aucune opération</div>'; return; }
+  el.innerHTML = gammeTemp.map((op,i) => `
+    <div class="gamme-item">
+      <span><strong>${i+1}.</strong> ${op.nom} <span style="color:#6b7280;font-size:12px;">(${op.temps} min)</span></span>
+      <button class="btn danger" onclick="removeOp(${i})">✕</button>
+    </div>`).join('');
+}
+async function saveArticle() {
+  const nom = document.getElementById('articleNom').value.trim();
+  const ref = document.getElementById('articleRef').value.trim();
+  if (!nom || !ref || !gammeTemp.length) return toast('Remplissez tout');
+  const r = await fetch('/api/articles', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ nom, ref, gamme: gammeTemp })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast('✅ Article enregistré');
+    gammeTemp = [];
+    document.getElementById('articleNom').value = '';
+    document.getElementById('articleRef').value = '';
+    renderGammeTemp();
+    loadArticles();
+  } else toast('❌ ' + d.error);
+}
+async function loadArticles() {
+  const r = await fetch('/api/articles');
+  articles = await r.json();
+  const el = document.getElementById('articlesList');
+  if (!articles.length) { el.innerHTML = '<div class="empty">Aucun article</div>'; }
+  else el.innerHTML = articles.map(a => `
+    <div class="of-card">
+      <h3>📦 ${a.nom} <span style="color:#6b7280;font-size:12px;">(${a.ref})</span></h3>
+      <div class="info">${a.gamme.length} opérations — ${a.gamme.reduce((s,o)=>s+o.temps,0)} min/pièce</div>
+      <div style="font-size:12px;color:#4b5563;">${a.gamme.map((o,i)=>`${i+1}. ${o.nom} (${o.temps}min)`).join(' → ')}</div>
+      <button class="btn danger" style="margin-top:8px;" onclick="delArticle(${a.id})">🗑 Supprimer</button>
+    </div>`).join('');
+  const sel = document.getElementById('ofArticle');
+  sel.innerHTML = articles.map(a => `<option value="${a.id}">${a.nom} (${a.ref})</option>`).join('');
+}
+async function delArticle(id) {
+  if (!confirm('Supprimer cet article ?')) return;
+  await fetch('/api/articles/'+id, {method:'DELETE'});
+  loadArticles();
+}
+
+// ---------- OF ----------
+async function saveOF() {
+  const articleId = document.getElementById('ofArticle').value;
+  const qte = parseInt(document.getElementById('ofQte').value);
+  const date = document.getElementById('ofDate').value;
+  if (!articleId || !qte || !date) return toast('Remplissez tout');
+  const art = articles.find(a => a.id == articleId);
+  const r = await fetch('/api/ofs', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ article_id: art.id, article_nom: art.nom, gamme: art.gamme, qte, date_livraison: date })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast('✅ OF ' + d.num);
+    document.getElementById('ofQte').value = '';
+    document.getElementById('ofDate').value = '';
+    loadOFs();
+  } else toast('❌ ' + d.error);
+}
+async function loadOFs() {
+  const r = await fetch('/api/ofs');
+  ofs = await r.json();
+  const el = document.getElementById('ofList');
+  if (!ofs.length) { el.innerHTML = '<div class="empty">Aucun OF</div>'; }
+  else el.innerHTML = ofs.map(of => {
+    const total = of.avancement.reduce((s,q)=>s+q,0);
+    const cible = of.gamme.length * of.qte;
+    const pct = cible ? Math.round(total/cible*100) : 0;
+    return `<div class="of-card">
+      <h3>📋 ${of.num} — ${of.article_nom} × ${of.qte}</h3>
+      <div class="info">Livraison : ${of.date_livraison} — Avancement : ${pct}%</div>
+      <div class="progress-bar"><div class="progress-fill ${pct===100?'done':''}" style="width:${pct}%"></div></div>
+      <button class="btn danger" style="margin-top:8px;" onclick="delOF(${of.id})">🗑 Supprimer</button>
+    </div>`;
+  }).join('');
+}
+async function delOF(id) {
+  if (!confirm('Supprimer cet OF ?')) return;
+  await fetch('/api/ofs/'+id, {method:'DELETE'});
+  loadOFs();
+}
+
+// ---------- SAISIE ----------
+function initHeures() {
+  const sel = document.getElementById('saisieHeure');
+  sel.innerHTML = HEURES.map(h => `<option value="${h}">${h}h - ${h+1}h</option>`).join('');
+}
+async function loadSaisie() {
+  const r = await fetch('/api/ofs');
+  ofs = await r.json();
+  const sel = document.getElementById('saisieOF');
+  sel.innerHTML = ofs.map(o => `<option value="${o.id}">${o.num} — ${o.article_nom} × ${o.qte}</option>`).join('');
+  updateOpsSaisie();
+  loadHistorique();
+}
+function updateOpsSaisie() {
+  const ofId = document.getElementById('saisieOF').value;
+  const of = ofs.find(o => o.id == ofId);
+  const sel = document.getElementById('saisieOp');
+  if (!of) { sel.innerHTML = ''; return; }
+  sel.innerHTML = of.gamme.map((op,i) => `<option value="${i}">${op.nom} (${of.avancement[i]}/${of.qte})</option>`).join('');
+}
+async function saveSaisie() {
+  const ofId = document.getElementById('saisieOF').value;
+  const opIdx = document.getElementById('saisieOp').value;
+  const heure = document.getElementById('saisieHeure').value;
+  const qte = parseInt(document.getElementById('saisieQte').value);
+  const rebut = parseInt(document.getElementById('saisieRebut').value) || 0;
+  if (!ofId || opIdx === '' || !qte) return toast('Remplissez tout');
+  const of = ofs.find(o => o.id == ofId);
+  const r = await fetch('/api/saisies', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      of_id: of.id, op_index: parseInt(opIdx), operation: of.gamme[opIdx].nom,
+      heure: parseInt(heure), qte, rebut
+    })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast('✅ Saisie enregistrée');
+    document.getElementById('saisieQte').value = '';
+    document.getElementById('saisieRebut').value = '0';
+    loadSaisie();
+  } else toast('❌ ' + d.error);
+}
+async function loadHistorique() {
+  const r = await fetch('/api/saisies');
+  const s = await r.json();
+  const el = document.getElementById('saisieHistorique');
+  if (!s.length) { el.innerHTML = '<div class="empty">Aucune saisie aujourd\'hui</div>'; return; }
+  el.innerHTML = s.map(x => `
+    <div class="hist-line">
+      <span><strong>${x.heure}h</strong> — ${x.operation} <em style="color:#6b7280;">(${x.operateur})</em></span>
+      <span>+${x.qte}${x.rebut?' ⚠️'+x.rebut:''}</span>
+    </div>`).join('');
+}
+
+// ---------- OPÉRATEURS ----------
+async function saveOperateur() {
+  const nom = document.getElementById('opNom').value.trim();
+  const poste = document.getElementById('opPoste').value.trim();
+  const code = document.getElementById('opCode').value.trim().toUpperCase();
+  if (!nom || !code) return toast('Nom et code requis');
+  const r = await fetch('/api/operateurs', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ nom, poste, code })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast('✅ Opératrice ajoutée');
+    document.getElementById('opNom').value = '';
+    document.getElementById('opPoste').value = '';
+    document.getElementById('opCode').value = '';
+    loadOperateurs();
+  } else toast('❌ ' + d.error);
+}
+async function loadOperateurs() {
+  const r = await fetch('/api/operateurs');
+  operateurs = await r.json();
+  const el = document.getElementById('operateursList');
+  if (!operateurs.length) { el.innerHTML = '<div class="empty">Aucune opératrice</div>'; }
+  else el.innerHTML = operateurs.map(o => `
+    <div class="op-row">
+      <span>👤 <strong>${o.nom}</strong> — ${o.poste || '—'} <em style="color:#6b7280;">(code: ${o.code})</em></span>
+      <button class="btn danger" onclick="delOperateur(${o.id})">🗑</button>
+    </div>`).join('');
+}
+async function delOperateur(id) {
+  if (!confirm('Supprimer ?')) return;
+  await fetch('/api/operateurs/'+id, {method:'DELETE'});
+  loadOperateurs();
+}
+
+// ---------- DASHBOARD ----------
+async function loadDashboard() {
+  const [rS, rO] = await Promise.all([fetch('/api/saisies'), fetch('/api/ofs')]);
+  const s = await rS.json();
+  ofs = await rO.json();
+  document.getElementById('statPieces').textContent = s.reduce((a,x)=>a+x.qte,0);
+  document.getElementById('statRebut').textContent = s.reduce((a,x)=>a+x.rebut,0);
+  const el = document.getElementById('dashOF');
+  if (!ofs.length) { el.innerHTML = '<div class="empty">Aucun OF</div>'; return; }
+  el.innerHTML = ofs.slice(0,5).map(of => {
+    const ops = of.gamme.map((op,i) => {
+      const fait = of.avancement[i], pct = of.qte ? Math.round(fait/of.qte*100) : 0;
+      const cls = fait >= of.qte ? 'done' : (fait>0 ? 'progress' : 'wait');
+      const lab = fait >= of.qte ? '✅' : (fait>0 ? '🟡' : '⚪');
+      return `<div class="op-row">
+        <span>${op.nom}</span>
+        <span><strong>${fait}/${of.qte}</strong> <span class="badge ${cls}">${lab}</span></span>
+      </div>`;
+    }).join('');
+    return `<div class="of-card"><h3>📋 ${of.num} — ${of.article_nom} × ${of.qte}</h3>
+      <div class="info">Livraison : ${of.date_livraison}</div>${ops}</div>`;
+  }).join('');
+}
+
+// ---------- RAPPORT ----------
+async function loadRapport() {
+  const date = document.getElementById('rapportDate').value || new Date().toISOString().slice(0,10);
+  const r = await fetch('/api/rapport?date='+date);
+  const data = await r.json();
+  const el = document.getElementById('rapportContent');
+  if (!data.length) { el.innerHTML = '<div class="empty">Aucune production ce jour</div>'; return; }
+  const total = data.reduce((a,x)=>a+x.total,0);
+  const rebuts = data.reduce((a,x)=>a+(x.rebuts||0),0);
+  el.innerHTML = data.map(d => `
+    <div class="op-row"><span>👤 ${d.operateur}</span><span><strong>${d.total}</strong> pièces ${d.rebuts?'⚠️'+d.rebuts:''}</span></div>
+  `).join('') + `
+    <div style="border-top:2px solid #1e3a8a;margin-top:12px;padding-top:12px;font-weight:700;">
+      <div class="op-row"><span>TOTAL</span><span>${total} pièces</span></div>
+      <div class="op-row"><span>Taux rebut</span><span>${total?(rebuts/total*100).toFixed(1):0}%</span></div>
+    </div>`;
+}
+
+// ---------- INIT ----------
+initHeures();
+document.getElementById('rapportDate').value = new Date().toISOString().slice(0,10);
+loadDashboard();
+loadArticles();
+loadOFs();
+loadOperateurs();
+</script>
+</body>
+</html>
